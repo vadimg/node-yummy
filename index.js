@@ -3,6 +3,20 @@ var crypto = require('crypto');
 
 // 3rd party
 var cookie = require('cookie');
+var bcrypt = require('bcrypt');
+
+
+// Create a longer key based on a passphrase.
+// This is preferable for openssl's AES encryption implementation
+// because it uses md5 for its key derivation function.
+// This will make weak passphrases less susceptible to brute-force decryption.
+var derive_key = function(pass) {
+    // precomputed salt to make key derivation deterministic
+    // across processes and installations
+    var salt = '$2a$10$gWMxkkWB5V2FI4BuXswwPe'; // 10 rounds
+
+    return bcrypt.hashSync(pass, salt);
+};
 
 var decode = function(cookies, key, secret) {
     // accept a raw cookie header string
@@ -18,7 +32,7 @@ var decode = function(cookies, key, secret) {
     // try to decipher the session cookie
     // if this fails we assume the cookie was altered or something bad happend
     // in this case we clear the session state as if a blank session was started
-    var decipher = crypto.createDecipher('aes192', secret);
+    var decipher = crypto.createDecipher('aes256', secret);
     var body = decipher.update(raw_cookie, 'base64', 'utf8');
     body += decipher.final('utf8');
 
@@ -38,7 +52,7 @@ module.exports = function (options) {
     var key = options.key || 'connect.sess';
 
     // hush hush
-    var secret = options.secret;
+    var secret = derive_key(options.secret);
 
     // default value for session cookie
     var cookie_options = options.cookie || {};
@@ -90,7 +104,7 @@ module.exports = function (options) {
                 return;
             }
 
-            var cipher = crypto.createCipher('aes192', secret);
+            var cipher = crypto.createCipher('aes256', secret);
             val = cipher.update(val, 'utf8', 'base64');
             val += cipher.final('base64');
 
