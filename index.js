@@ -52,7 +52,15 @@ module.exports = function (options) {
     var key = options.key || 'connect.sess';
 
     // hush hush
-    var secret = derive_key(options.secret);
+    var secret = options.secret;
+
+    // derive secret using an adaptive hash function?
+    var derive_fn = options.derive_fn;
+    if (derive_fn === undefined) {
+        secret = derive_key(secret); // if not specified, use bcrypt
+    } else if (typeof derive_fn === 'function') {
+        secret = derive_fn(secret);
+    }
 
     // default value for session cookie
     var cookie_options = options.cookie || {};
